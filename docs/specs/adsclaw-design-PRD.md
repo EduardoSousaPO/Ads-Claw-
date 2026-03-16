@@ -36,14 +36,12 @@ Apesar do agente focar fortemente no Telegram para interações urgentes, ele po
 1. O agente monitora as contas e cruza com os limites estabelecidos no banco de dados Supabase (`client_rules`). Ele age de forma proativa para garantir o resultado do modelo SWAS (Maximizar Lucro por Dólar Especial - LTV/ROAS).
 2. Ao detectar necessidade de nova campanha ou oportunidade de otimização, o agente pergunta ao gestor interno: **"Deseja subir criativos manuais ou abrir o Laboratório Criativo para novas gerações?"** (O Dilema do Criativo).
 
-### Fase 2: Laboratório Criativo (Internal Production Line)
-Caso a produção de novos criativos seja solicitada, o AdsClaw atua como a linha de produção da agência, utilizando o ecossistema Google AI para minimizar custos operacionais da agência:
-- **Análise de Mercado:** Uso do `Apify` para capturar referências e benchmarks. 
-- **Desconstrução Visual:** O gestor pode enviar prints de concorrentes. O agente usa **Gemini 1.5 Pro** para decompor os elementos vencedores do anúncio.
-- **Produção de Copy:** **Gemini 1.5 Flash** (mais rápido e barato) para criar dezenas de variações de headlines, hooks e descrições.
-- **Produção Audiovisual:** 
-    - **Vídeo/Animação:** Geração de vídeos de alta conversão usando **Google Veo** e Nano-banana (via skill `ai-video-generation`).
-    - **Imagens:** DALL-E 3 (OpenAI API), Gemini, ou modelos open-source (Flux/Stable Diffusion via `inferen.sh`) como fallback seguro.
+### 3.4 Laboratório Criativo (IA Generativa)
+- **Desconstrução Visual:** O agente utiliza o **Gemini 1.5 Pro/Flash** para analisar criativos de alta performance capturados via **Apify Skills**.
+- **Motor Audiovisual:** Integrado ao ecossistema **skills.sh (inference.sh)**.
+- **Geração de Imagens:** Foco no modelo **FLUX-1-Schnell/Dev** para criativos com texto legível e fotorrealismo de alta conversão.
+- **Geração de Vídeos:** Uso proativo de **Google Veo 3.1** e **Seedance** para anúncios dinâmicos.
+- **Omnichannel Delivery:** Os arquivos são gerados e organizados por conta de cliente, prontos para subir via MCP.
 
 ### Fase 3: Execução e Otimização
 1. Criação e estruturação da campanha nas APIs (Google/Meta), seguindo a taxonomia e orçamentos do cliente.

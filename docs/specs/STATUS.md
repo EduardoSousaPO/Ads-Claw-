@@ -26,7 +26,7 @@ Este documento acompanha o progresso das tarefas definidas no `TASKS.md` em conf
 ### Fase 5: Motor do "Laboratório Criativo" & IA Generativa (✅ Concluída)
 - **5.1:** Criado serviço `CreativeLab` integrado ao **Apify** para extração automática de benchmarks de anúncios no Meta Ads Library.
 - **5.2:** Implementada lógica de análise e geração de copy utilizando **Gemini 1.5 Flash**, transformando benchmarks em variações de alta performance.
-- **5.3:** Conexão estabelecida com a CLI `infsh` para geração autônoma de vídeos (**Veo 3.1**) e imagens (**FLUX**) baseados nos prompts gerados pelo agente.
+- **5.3:** Módulo de produção audiovisual refatorado para o ecossistema **skills.sh (inference.sh)**, priorizando **FLUX-1-Schnell/Dev** para imagens de alta conversão e **Veo 3.1** para vídeos dinâmicos, eliminando dependência de APIs diretas de SDK onde as skills são superiores.
 
 ### Fase 6: Automação Inteligente e Orquestração (✅ Concluída)
 - **6.1:** Implementado o serviço `Orchestrator` usando **node-cron** para auditoria periódica de performance.

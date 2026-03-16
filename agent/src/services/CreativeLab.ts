@@ -96,15 +96,21 @@ export class CreativeLab {
     }
 
     async generateImage(prompt: string): Promise<string> {
-        console.log(`🖼️ [CreativeLab] Gerando imagem: ${prompt}`);
+        console.log(`🖼️ [CreativeLab] Gerando imagem Premium com FLUX: ${prompt}`);
         try {
-            // Usando FLUX via infsh como fallback premium
+            // FLUX-1-Schnell é o modelo de escolha para anúncios com texto e realismo
             const cmd = `infsh app run black-forest-labs/flux-1-schnell --input "{\\"prompt\\": \\"${prompt}\\"}" --json`;
             const { stdout } = await execAsync(cmd);
             const result = JSON.parse(stdout);
-            return result.output_url || result.file_url || 'URL_NOT_FOUND';
+            
+            // O inference.sh pode retornar URLs em diferentes campos dependendo da App
+            const imageUrl = result.output_url || result.file_url || (result.images && result.images[0]);
+            
+            if (!imageUrl) throw new Error('Campo de imagem não encontrado no JSON de resposta do infsh');
+            
+            return imageUrl;
         } catch (error) {
-            console.error('❌ Erro ao gerar imagem via infsh:', error);
+            console.error('❌ Erro ao gerar imagem via FLUX (infsh):', error);
             return 'ERROR_GENERATING_IMAGE';
         }
     }

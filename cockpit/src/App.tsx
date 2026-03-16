@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import MainLayout from './layouts/MainLayout';
 import DashboardPage from './pages/DashboardPage';
 import ClientsPage from './pages/ClientsPage';
+import AgentChat from './components/AgentChat';
 
 function App() {
   return (
@@ -13,6 +14,8 @@ function App() {
           <Route path="clients" element={<ClientsPage />} />
         </Route>
       </Routes>
+      {/* Chat flutuante disponível em todas as páginas */}
+      <AgentChat />
     </Router>
   );
 }

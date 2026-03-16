@@ -1,9 +1,19 @@
+import { useState, useEffect } from 'react';
 import { TrendingUp, Users, Target, MousePointer2, AlertCircle } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 const DashboardPage = () => {
+  const [clientCount, setClientCount] = useState(0);
+
+  useEffect(() => {
+    supabase.from('clients').select('id', { count: 'exact' }).then(({ count }) => {
+      setClientCount(count || 0);
+    });
+  }, []);
+
   const stats = [
     { label: 'ROAS Médio', value: '4.2x', trend: '+12%', icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
-    { label: 'Clientes Ativos', value: '12', trend: '2 novos', icon: Users, color: 'text-blue-400', bg: 'bg-blue-400/10' },
+    { label: 'Clientes Ativos', value: clientCount === 0 ? '0' : String(clientCount), trend: 'Base Supabase', icon: Users, color: 'text-blue-400', bg: 'bg-blue-400/10' },
     { label: 'Investimento Total', value: 'R$ 45.200', trend: '+5%', icon: Target, color: 'text-purple-400', bg: 'bg-purple-400/10' },
     { label: 'CPC Global', value: 'R$ 0,42', trend: '-8%', icon: MousePointer2, color: 'text-amber-400', bg: 'bg-amber-400/10' },
   ];

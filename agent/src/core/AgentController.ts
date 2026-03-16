@@ -1,22 +1,28 @@
 import { AgentLoop } from './AgentLoop';
 import { OmnichannelGateway } from '../io/OmnichannelGateway';
 import { Orchestrator } from './Orchestrator';
+import { HttpServer } from '../io/HttpServer';
 
 /**
- * Controller principal da arquitetura baseada no SandeClaw.
- * 
- * Ele é o regente (Facade) responsável por instanciar a "Boca" (Gateway/Output),
- * o "Ouvido" (Gateway/Input) e o "Cérebro" (AgentLoop).
+ * Controller principal da arquitetura AdsClaw.
+ * Orquestra Telegram, Chat Web (HTTP) e o Orchestrator proativo.
  */
 export class AgentController {
     private loop: AgentLoop;
     private gateway: OmnichannelGateway;
     private orchestrator: Orchestrator;
+    private httpServer: HttpServer;
 
     constructor() {
         this.loop = new AgentLoop();
         this.gateway = new OmnichannelGateway(this);
         this.orchestrator = new Orchestrator(this.gateway.telegramHandler);
+        
+        // Inicializa o servidor HTTP de Chat Web (para o Cockpit/Vercel)
+        this.httpServer = new HttpServer(
+            (input) => this.handleInput(input),
+            Number(process.env.HTTP_PORT) || 3001
+        );
     }
 
     /**
@@ -25,9 +31,13 @@ export class AgentController {
     async start() {
         console.log("🎮 [AgentController] Inicializando Engine Cognitiva e Gateways...");
         
-        // Inicia o pool de listeners proativos
+        // 1. Cron jobs de auditoria proativa
         this.orchestrator.start();
         
+        // 2. Servidor HTTP de Chat para o Frontend Web
+        this.httpServer.start();
+        
+        // 3. Telegram (listener principal de comandos)
         await this.gateway.startListening();
     }
 

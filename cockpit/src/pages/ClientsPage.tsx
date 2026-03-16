@@ -12,6 +12,9 @@ interface Client {
 const ClientsPage = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientNiche, setNewClientNiche] = useState('');
 
   useEffect(() => {
     fetchClients();
@@ -33,6 +36,44 @@ const ClientsPage = () => {
     }
   }
 
+  async function handleAddClient(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newClientName) return;
+
+    try {
+      // 1. Inserir cliente
+      const { data, error: clientError } = await supabase
+        .from('clients')
+        .insert([{ name: newClientName, niche: newClientNiche }])
+        .select()
+        .single();
+
+      if (clientError) throw clientError;
+      
+      // 2. Criar regras padrão para o Orquestrador/Agent
+      if (data) {
+        const { error: rulesError } = await supabase
+          .from('client_rules')
+          .insert([{ 
+            client_id: data.id, 
+            max_cpa: 5.0, 
+            daily_budget: 100,
+            fatigue_days: 7 
+          }]);
+        
+        if (rulesError) console.error('Erro ao criar regras iniciais:', rulesError);
+      }
+
+      setNewClientName('');
+      setNewClientNiche('');
+      setIsModalOpen(false);
+      fetchClients();
+    } catch (err) {
+      console.error('Erro ao adicionar cliente:', err);
+      alert('Erro ao adicionar cliente. Verifique o console.');
+    }
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex items-center justify-between">
@@ -40,11 +81,59 @@ const ClientsPage = () => {
           <h2 className="text-3xl font-bold text-white tracking-tight">Gestão de Clientes</h2>
           <p className="text-slate-500 mt-1">Configure permissões, orçamentos e regras por conta.</p>
         </div>
-        <button className="bg-white hover:bg-slate-100 text-slate-950 px-5 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 active:scale-95 shadow-xl shadow-white/5">
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="bg-white hover:bg-slate-100 text-slate-950 px-5 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 active:scale-95 shadow-xl shadow-white/5"
+        >
           <Plus size={20} />
           Novo Cliente
         </button>
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-2xl font-bold text-white mb-6">Cadastrar Novo Cliente</h3>
+            <form onSubmit={handleAddClient} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Nome da Empresa</label>
+                <input 
+                  autoFocus
+                  required
+                  value={newClientName}
+                  onChange={(e) => setNewClientName(e.target.value)}
+                  placeholder="Ex: AdsClaw SaaS"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Nicho / Segmento</label>
+                <input 
+                  value={newClientNiche}
+                  onChange={(e) => setNewClientNiche(e.target.value)}
+                  placeholder="Ex: Infoprodutos, E-commerce"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button 
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-600/20 transition-colors"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="glass rounded-3xl border border-slate-800 overflow-hidden shadow-2xl">
         <table className="w-full text-left">
