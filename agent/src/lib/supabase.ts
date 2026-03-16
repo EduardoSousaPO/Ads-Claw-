@@ -6,19 +6,29 @@ import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || '';
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.warn('⚠️ ATENÇÃO: Variáveis SUPABASE_URL ou SUPABASE_SERVICE_KEY não encontradas no .env.\n👉 O agente operará as "Skills" e o "Telegram" normalmente, mas as chamadas de banco (Client fetch) poderão falhar!');
+// Preferência: Service Role Key (bypass RLS, acesso admin completo)
+// Fallback: Anon/Publishable Key (limitada ao RLS público)
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_KEY ||
+  process.env.SUPABASE_ANON_KEY ||
+  '';
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ CRÍTICO: SUPABASE_URL e SUPABASE_SERVICE_KEY (ou SUPABASE_ANON_KEY) são obrigatórias no .env!');
+  process.exit(1);
+}
+
+if (!process.env.SUPABASE_SERVICE_KEY) {
+  console.warn('⚠️  [Supabase] Usando ANON KEY — adicione SUPABASE_SERVICE_KEY para bypass total do RLS.');
 }
 
 /**
- * Cliente Supabase com permissões Administrativas (Service Role).
- * IMPORTANTE: No AdsClaw SWAS, nós usamos o Service Role Key na aplicação *Server-Side*
- * (Background Agent). Ele terá poder de escrita e bypass do RLS para conseguir
- * gerenciar as campanhas autonomamente!
+ * Cliente Supabase com permissões Administrativas (Service Role preferido).
+ * O Service Role Key dá bypass completo do RLS, ideal para o agente autônomo.
+ * Para obtê-lo: Supabase Dashboard → Settings → API → service_role key
  */
-export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
