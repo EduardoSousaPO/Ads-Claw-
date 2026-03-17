@@ -63,7 +63,7 @@ export class AgentLoop {
 
         try {
             const model = this.gemini.getGenerativeModel({
-                model: 'gemini-1.5-flash',
+                model: 'gemini-1.5-flash-latest',
                 systemInstruction: SYSTEM_PROMPT,
             });
 
