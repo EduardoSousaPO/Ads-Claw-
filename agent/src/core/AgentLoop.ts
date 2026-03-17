@@ -1,56 +1,87 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { MemoryManager } from '../memory/MemoryManager';
 import { ToolRegistry } from '../tools/ToolRegistry';
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+
+const SYSTEM_PROMPT = `Você é o **AdsClaw AI**, um agente especialista em gestão de campanhas de mídia paga (Meta Ads e Google Ads) para agências de marketing.
+
+Você opera dentro de um sistema chamado **AdsClaw SWAS** (Software With an Agent Soul) que gerencia múltiplos clientes de uma agência.
+
+**Suas capacidades:**
+- Analisar métricas de campanhas (ROAS, CPA, CTR, CPM)
+- Sugerir e configurar campanhas no Meta Ads e Google Ads
+- Gerar textos persuasivos para anúncios (copies)
+- Identificar oportunidades de otimização de orçamento
+- Criar briefings para criativos (imagens e vídeos)
+- Monitorar fadiga de criativos e sugerir substituições
+
+**Seu tom:** Profissional, direto e orientado a resultados. Use emojis com moderação para sinalizar ações/status.
+
+**Restrições:** Você faz parte de uma agência. Não tome ações irreversíveis (pausar/deletar campanhas) sem confirmação explícita do usuário.
+
+Quando o usuário pedir algo que envolva dados de um cliente específico, pergunte qual cliente antes de prosseguir.`;
 
 /**
  * O Motor Central ReAct (Reasoning and Acting) do AdsClaw.
- * 
- * Aqui é onde o Agente decide as ferramentas (MCP ou Skills) necessárias
- * num ciclo determinístico focado no modelo SWAS.
+ * Usa Gemini como LLM para processamento de linguagem natural.
  */
 export class AgentLoop {
     private readonly MAX_ITERATIONS = 5;
     private memory: MemoryManager;
     private registry: ToolRegistry;
+    private gemini: GoogleGenerativeAI | null = null;
 
     constructor() {
         this.memory = new MemoryManager();
         this.registry = new ToolRegistry();
-        
-        // Na inicialização ele carrega em RAM o inventário do FileSystem
         this.registry.loadLocalSkills();
+
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (apiKey) {
+            this.gemini = new GoogleGenerativeAI(apiKey);
+            console.log('✅ [AgentLoop] Gemini AI conectado.');
+        } else {
+            console.warn('⚠️ [AgentLoop] GEMINI_API_KEY ausente — respostas em modo mock.');
+        }
     }
 
     /**
-     * Executa o ciclo cognitivo.
+     * Executa o ciclo cognitivo com Gemini.
      */
     async run(input: any): Promise<{ content: string }> {
-        console.log(`🔍 [AgentLoop] Iniciando raciocínio para a intent: "${input.content.substring(0, 30)}..."`);
-        
-        let currentIteration = 0;
-        
-        // Simulação abstrata do ReAct enquanto a camada do LLM (Gemini) não é acotovelada
-        while (currentIteration < this.MAX_ITERATIONS) {
-            console.log(`🔄 [AgentLoop] Iteração ${currentIteration + 1}/${this.MAX_ITERATIONS}`);
-            
-            /* Próximos passos (Task 2.2+):
-             * 1. Solicita histórico via MemoryManager (injeta Contexto).
-             * 2. Formata input pro provedor (LLMProvider.infer()).
-             * 3. Checa se o LLM pediu `tool_calls`. Se sim, executa a tool (Ex: apify_scrape)
-             *    e pendura a observation. Continua loop (currentIteration++).
-             * 4. Se for text cru ("Final Answer"), dar break no Loop.
-             */
-            
-            // "Break Hard" pra testes iniciais enquanto o Google SDK não está upado
-            currentIteration++;
-            break; 
+        console.log(`🔍 [AgentLoop] Intent recebida: "${input.content?.substring(0, 60)}..."`);
+
+        // Fallback se Gemini não estiver configurado
+        if (!this.gemini) {
+            return {
+                content: `🤖 *AdsClaw AI (Modo Demo)*\n\nVocê disse: "_${input.content}_"\n\nConfigure a variável \`GEMINI_API_KEY\` no \`.env\` para respostas reais.`
+            };
         }
 
-        if (currentIteration >= this.MAX_ITERATIONS) {
-            throw new Error('Agent atingiu o limite máximo de iterações sem chegar a uma resposta final.');
-        }
+        try {
+            const model = this.gemini.getGenerativeModel({
+                model: 'gemini-1.5-flash',
+                systemInstruction: SYSTEM_PROMPT,
+            });
 
-        return {
-            content: `🤖 [AgentLoop Mock]: Concluí a iteração número ${currentIteration}. Você disse: "${input.content}". A conexão ponta a ponta (Web/TG -> Controller -> Loop) está funcionando!`
-        };
+            // Contexto adicional: skills disponíveis
+            const skills = this.registry.getSkills();
+            const skillList = skills.slice(0, 5).map(s => `- ${s.name}: ${s.description.substring(0, 80)}`).join('\n');
+
+            const enrichedPrompt = `${input.content}\n\n[Contexto: ${skills.length} skills disponíveis, incluindo: ${skillList}]`;
+
+            const result = await model.generateContent(enrichedPrompt);
+            const text = result.response.text();
+
+            return { content: text };
+        } catch (err: any) {
+            console.error('❌ [AgentLoop] Erro no Gemini:', err.message);
+            return {
+                content: `⚠️ Erro ao processar sua solicitação: ${err.message}`
+            };
+        }
     }
 }

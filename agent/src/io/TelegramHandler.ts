@@ -86,7 +86,9 @@ export class TelegramHandler {
      * Envia uma mensagem unificada (aproveitando o context ou chatId).
      */
     async sendResponse(response: any, sourceInput: any) {
-        await this.bot.api.sendMessage(sourceInput.id, response.content);
+        // chatId = ID do chat com o usuário. sourceInput.id é o ID da mensagem (errado para envio).
+        const chatId = sourceInput.chatId || sourceInput.userId;
+        await this.bot.api.sendMessage(chatId, response.content, { parse_mode: 'Markdown' });
     }
 
     /**
