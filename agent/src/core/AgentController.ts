@@ -1,4 +1,4 @@
-import { AgentLoop } from './AgentLoop';
+import { AgentLoop, type AgentInput, type AgentOutput } from './AgentLoop';
 import { OmnichannelGateway } from '../io/OmnichannelGateway';
 import { Orchestrator } from './Orchestrator';
 import { HttpServer } from '../io/HttpServer';
@@ -16,12 +16,12 @@ export class AgentController {
     constructor() {
         this.loop = new AgentLoop();
         this.gateway = new OmnichannelGateway(this);
-        this.orchestrator = new Orchestrator(this.gateway.telegramHandler);
-        
+        this.orchestrator = new Orchestrator();
+
         // Inicializa o servidor HTTP de Chat Web (para o Cockpit/Vercel)
         this.httpServer = new HttpServer(
             (input) => this.handleInput(input),
-            Number(process.env.HTTP_PORT) || 3001
+            Number(process.env['HTTP_PORT']) || 3001
         );
     }
 
@@ -44,26 +44,23 @@ export class AgentController {
     /**
      * Recebe inputs já sanitizados e padronizados dos diferentes canais
      * e os envia ao Motor Cognitivo (Agent Loop).
-     * 
-     * @param input Objeto padronizado de Input contendo source, id, userId, content, etc.
      */
-    async handleInput(input: any) {
-        console.log(`🧠 [AgentController] Recebido Input do tipo '${input.type}' oriundo do '${input.source}'. Roteando para AgentLoop...`);
-        
+    async handleInput(input: AgentInput): Promise<AgentOutput> {
+        console.log(`🧠 [AgentController] Input '${input.source ?? 'unknown'}' → AgentLoop...`);
+
         try {
-            // Executa iterações base (Thought -> Action -> Observation)
             const response = await this.loop.run(input);
-            console.log(`📤 [AgentController] AgentLoop Concluído. Devolvendo resposta para a fonte base (${input.source})...`);
-            
-            // Retorna ao output do respectivo gateway
             await this.gateway.sendOutput(response, input);
-        } catch (error: any) {
-            console.error('💥 [AgentController] Falha Crítica no Ciclo ReAct:', error);
-            
-            // Estratégia de Fallback Seguro
-            await this.gateway.sendOutput({ 
-                content: `⚠️ Ocorreu uma exceção fatal interna no ciclo cognitivo: ${error.message}` 
-            }, input);
+            return response;
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : String(error);
+            console.error('💥 [AgentController] Falha no ciclo ReAct:', message);
+
+            const fallback: AgentOutput = {
+                content: `⚠️ Ocorreu um erro interno. Tente novamente em alguns instantes.`
+            };
+            await this.gateway.sendOutput(fallback, input);
+            return fallback;
         }
     }
 }

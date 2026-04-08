@@ -1,35 +1,122 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Users, Target, MousePointer2, AlertCircle } from 'lucide-react';
+import { TrendingUp, Users, AlertTriangle, CheckCircle, Bell, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
+interface Alert {
+  id: string;
+  client_id: string;
+  alert_type: string;
+  severity: string;
+  title: string;
+  message: string;
+  status: string;
+  created_at: string;
+}
+
+interface PendingApproval {
+  id: string;
+  action: string;
+  description: string;
+  status: string;
+  created_at: string;
+  expires_at: string;
+}
+
+interface ClientWithRules {
+  id: string;
+  name: string;
+  status: string;
+  client_rules:
+    | { target_cpa: number | null; daily_budget: number | null; sector: string | null }
+    | { target_cpa: number | null; daily_budget: number | null; sector: string | null }[]
+    | null;
+}
+
 const DashboardPage = () => {
-  const [clientCount, setClientCount] = useState(0);
+  const [activeClients, setActiveClients] = useState(0);
+  const [totalClients, setTotalClients] = useState(0);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [approvals, setApprovals] = useState<PendingApproval[]>([]);
+  const [clients, setClients] = useState<ClientWithRules[]>([]);
+  const [totalBudget, setTotalBudget] = useState(0);
 
   useEffect(() => {
-    supabase.from('clients').select('id', { count: 'exact' }).then(({ count }) => {
-      setClientCount(count || 0);
-    });
+    loadDashboardData();
   }, []);
 
+  async function loadDashboardData() {
+    // Carregar em paralelo
+    const [clientsRes, alertsRes, approvalsRes] = await Promise.all([
+      supabase
+        .from('clients')
+        .select('id, name, status, client_rules(target_cpa, daily_budget, sector)')
+        .order('name'),
+      supabase
+        .from('alerts')
+        .select('*')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('pending_approvals')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(10),
+    ]);
+
+    if (clientsRes.data) {
+      const all = clientsRes.data as ClientWithRules[];
+      setClients(all);
+      setTotalClients(all.length);
+      const active = all.filter(c => c.status === 'active');
+      setActiveClients(active.length);
+      const budget = active.reduce((sum, c) => {
+        const rules = Array.isArray(c.client_rules) ? c.client_rules?.[0] : c.client_rules;
+        return sum + (rules?.daily_budget ?? 0);
+      }, 0);
+      setTotalBudget(budget);
+    }
+
+    if (alertsRes.data) setAlerts(alertsRes.data as Alert[]);
+    if (approvalsRes.data) setApprovals(approvalsRes.data as PendingApproval[]);
+  }
+
+  const pendingAlerts = alerts.filter(a => a.status === 'pending' || a.status === 'sent').length;
+
   const stats = [
-    { label: 'ROAS Médio', value: '4.2x', trend: '+12%', icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
-    { label: 'Clientes Ativos', value: clientCount === 0 ? '0' : String(clientCount), trend: 'Base Supabase', icon: Users, color: 'text-blue-400', bg: 'bg-blue-400/10' },
-    { label: 'Investimento Total', value: 'R$ 45.200', trend: '+5%', icon: Target, color: 'text-purple-400', bg: 'bg-purple-400/10' },
-    { label: 'CPC Global', value: 'R$ 0,42', trend: '-8%', icon: MousePointer2, color: 'text-amber-400', bg: 'bg-amber-400/10' },
+    { label: 'Clientes Ativos', value: String(activeClients), sub: `${totalClients} total`, icon: Users, color: 'text-blue-400', bg: 'bg-blue-400/10' },
+    { label: 'Orçamento Diário', value: `R$ ${totalBudget.toLocaleString('pt-BR')}`, sub: 'Soma dos clientes', icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
+    { label: 'Alertas Ativos', value: String(pendingAlerts), sub: `${alerts.length} total`, icon: AlertTriangle, color: pendingAlerts > 0 ? 'text-amber-400' : 'text-slate-400', bg: pendingAlerts > 0 ? 'bg-amber-400/10' : 'bg-slate-400/10' },
+    { label: 'Aprovações Pendentes', value: String(approvals.length), sub: 'Aguardando gestor', icon: Clock, color: approvals.length > 0 ? 'text-purple-400' : 'text-slate-400', bg: approvals.length > 0 ? 'bg-purple-400/10' : 'bg-slate-400/10' },
   ];
+
+  function severityColor(severity: string) {
+    if (severity === 'critical') return 'text-red-400 bg-red-400/10 border-red-400/20';
+    if (severity === 'warning') return 'text-amber-400 bg-amber-400/10 border-amber-400/20';
+    return 'text-blue-400 bg-blue-400/10 border-blue-400/20';
+  }
+
+  function timeAgo(dateStr: string) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}min atrás`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h atrás`;
+    return `${Math.floor(hours / 24)}d atrás`;
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-white tracking-tight">Dashboard Geral</h2>
+          <h2 className="text-3xl font-bold text-white tracking-tight">Dashboard</h2>
           <p className="text-slate-500 mt-1">Visão consolidada de todas as contas gerenciadas pela IA.</p>
         </div>
-        <button className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-semibold transition-all shadow-lg shadow-blue-600/20 active:scale-95">
-          Gerar Relatório IA
-        </button>
       </div>
 
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, i) => {
           const Icon = stat.icon;
@@ -39,9 +126,7 @@ const DashboardPage = () => {
                 <div className={`${stat.bg} ${stat.color} p-3 rounded-xl`}>
                   <Icon size={24} />
                 </div>
-                <span className={`text-[11px] font-bold px-2 py-1 rounded-full ${stat.trend.startsWith('+') ? 'bg-emerald-400/10 text-emerald-400' : 'bg-amber-400/10 text-amber-400'}`}>
-                  {stat.trend}
-                </span>
+                <span className="text-[11px] font-medium text-slate-500">{stat.sub}</span>
               </div>
               <p className="text-sm font-medium text-slate-500">{stat.label}</p>
               <h3 className="text-2xl font-bold text-white mt-1">{stat.value}</h3>
@@ -51,69 +136,94 @@ const DashboardPage = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Alertas Recentes */}
         <div className="lg:col-span-2 glass p-8 rounded-3xl border border-slate-800">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-bold text-white">Performance Criativa</h3>
-            <select className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-sm outline-none text-slate-400 focus:border-blue-500/50 transition-colors">
-              <option value="7">Últimos 7 dias</option>
-              <option value="30">Últimos 30 dias</option>
-            </select>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <Bell size={20} className="text-amber-400" />
+              Alertas Recentes
+            </h3>
+            <Link to="/alerts" className="text-sm text-blue-400 hover:text-blue-300 font-medium transition-colors">
+              Ver todos →
+            </Link>
           </div>
-          <div className="h-64 flex items-end justify-between gap-2">
-            {[40, 65, 45, 90, 55, 75, 50, 85, 95, 60, 45, 80].map((h, i) => (
-              <div key={i} className="flex-1 group relative cursor-pointer">
-                <div 
-                  className="bg-blue-600/40 group-hover:bg-blue-500/80 rounded-t-lg transition-all duration-500 w-full" 
-                  style={{ height: `${h}%` }}
-                ></div>
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                   {h}%
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-12 gap-2 mt-4">
-             {['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'].map(m => (
-               <span key={m} className="col-span-1 text-center text-[10px] font-bold text-slate-600">{m}</span>
-             ))}
-          </div>
-        </div>
 
-        <div className="glass p-8 rounded-3xl border border-slate-800 flex flex-col">
-          <h3 className="text-xl font-bold text-white mb-6">Estado do Agente</h3>
-          <div className="flex-1 space-y-6">
-            <div className="flex items-start gap-4 p-4 rounded-2xl bg-blue-600/5 border border-blue-500/20">
-              <AlertCircle size={20} className="text-blue-400 mt-1 shrink-0" />
-              <div>
-                <h4 className="text-sm font-bold text-blue-100">Otimização Ativa</h4>
-                <p className="text-xs text-blue-300/70 mt-1leading-relaxed">O Agent Loop está analisando as campanhas do cliente Meta Ads.</p>
-              </div>
+          {alerts.length === 0 ? (
+            <div className="text-center py-12">
+              <CheckCircle size={40} className="text-emerald-400/40 mx-auto mb-3" />
+              <p className="text-slate-500 font-medium">Nenhum alerta no momento.</p>
+              <p className="text-slate-600 text-sm mt-1">O Orchestrator monitora as contas automaticamente.</p>
             </div>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Iterações Ativas</span>
-                <span className="text-xs font-bold text-blue-400">4 / 5</span>
-              </div>
-              <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-600 w-[80%] rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
-              </div>
-            </div>
-
-            <div className="space-y-3 pt-4">
-              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Logs de Ação</h4>
-              {[
-                'Pensando: Analisando CPA alvo...',
-                'Ação: Buscando métricas Meta MCP',
-                'Observação: CPA atual R$ 4,50 (limite R$ 5,00)',
-              ].map((log, i) => (
-                <div key={i} className="flex gap-3 text-[11px] font-mono">
-                  <span className="text-blue-500/50">[{i+1}]</span>
-                  <span className="text-slate-400">{log}</span>
+          ) : (
+            <div className="space-y-3">
+              {alerts.slice(0, 5).map((alert) => (
+                <div key={alert.id} className={`p-4 rounded-xl border ${severityColor(alert.severity)} flex items-start gap-3`}>
+                  <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-sm font-bold truncate">{alert.title}</h4>
+                      <span className="text-[10px] text-slate-500 shrink-0">{timeAgo(alert.created_at)}</span>
+                    </div>
+                    <p className="text-xs mt-1 opacity-70 line-clamp-2">{alert.title}</p>
+                    <span className={`inline-block mt-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      alert.status === 'sent' ? 'bg-emerald-400/20 text-emerald-400' :
+                      alert.status === 'pending' ? 'bg-amber-400/20 text-amber-400' :
+                      'bg-slate-400/20 text-slate-400'
+                    }`}>
+                      {alert.status}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
+          )}
+        </div>
+
+        {/* Clientes & Aprovações */}
+        <div className="glass p-8 rounded-3xl border border-slate-800 flex flex-col">
+          <h3 className="text-xl font-bold text-white mb-6">Clientes</h3>
+          <div className="space-y-3 flex-1">
+            {clients.filter(c => c.status === 'active').map((client) => {
+              const rules = Array.isArray(client.client_rules) ? client.client_rules?.[0] : client.client_rules;
+              return (
+                <div key={client.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-800/30 hover:bg-slate-800/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-600/30 to-purple-600/30 rounded-lg flex items-center justify-center text-xs font-bold text-white border border-slate-700">
+                      {client.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-white">{client.name}</span>
+                      <p className="text-[10px] text-slate-500">{rules?.sector ?? 'Geral'}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-emerald-400">R$ {rules?.daily_budget ?? 0}/dia</p>
+                    <p className="text-[10px] text-slate-500">CPA: R$ {rules?.target_cpa ?? '-'}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+
+          {approvals.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-slate-800">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-bold text-purple-400 flex items-center gap-2">
+                  <Clock size={14} />
+                  Aprovações Pendentes
+                </h4>
+                <Link to="/approvals" className="text-[10px] text-blue-400 hover:text-blue-300 font-medium">
+                  Ver →
+                </Link>
+              </div>
+              {approvals.slice(0, 3).map((a) => (
+                <div key={a.id} className="p-2 rounded-lg bg-purple-400/5 border border-purple-400/10 mb-2">
+                  <p className="text-xs font-medium text-white truncate">{a.description}</p>
+                  <p className="text-[10px] text-slate-500">{a.action} · {timeAgo(a.created_at)}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

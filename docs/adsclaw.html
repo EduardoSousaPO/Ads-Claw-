@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AdsClaw — Visão simples</title>
+    <style>
+      :root{
+        --bg: #070A12;
+        --panel: rgba(255,255,255,.06);
+        --panel2: rgba(255,255,255,.04);
+        --stroke: rgba(255,255,255,.10);
+        --text: rgba(255,255,255,.92);
+        --muted: rgba(255,255,255,.62);
+        --faint: rgba(255,255,255,.38);
+        --brand: #6EE7FF;
+        --accent: #A78BFA;
+        --good: #34D399;
+        --warn: #FBBF24;
+        --danger: #FB7185;
+        --shadow: 0 16px 60px rgba(0,0,0,.55);
+        --radius: 18px;
+        --radius2: 24px;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body{
+        margin: 0;
+        color: var(--text);
+        background:
+          radial-gradient(1200px 700px at 12% 10%, rgba(110,231,255,.10), transparent 55%),
+          radial-gradient(1100px 800px at 85% 20%, rgba(167,139,250,.12), transparent 60%),
+          radial-gradient(900px 600px at 35% 92%, rgba(52,211,153,.08), transparent 60%),
+          linear-gradient(180deg, #050812 0%, var(--bg) 80%);
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        line-height: 1.45;
+      }
+
+      a{ color: var(--brand); text-decoration: none; }
+      a:hover{ text-decoration: underline; }
+      code{
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: .95em;
+        color: rgba(255,255,255,.88);
+        background: rgba(255,255,255,.06);
+        border: 1px solid rgba(255,255,255,.10);
+        padding: .1rem .35rem;
+        border-radius: 10px;
+        white-space: nowrap;
+      }
+
+      .wrap{
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 44px 20px 56px;
+      }
+
+      .top{
+        display: grid;
+        grid-template-columns: 1.2fr .8fr;
+        gap: 18px;
+        align-items: stretch;
+      }
+      @media (max-width: 920px){
+        .top{ grid-template-columns: 1fr; }
+      }
+
+      .card{
+        background: linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius2);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+      .card .inner{ padding: 22px; }
+      .kicker{
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        letter-spacing: .16em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .dot{
+        width: 9px; height: 9px; border-radius: 999px;
+        background: linear-gradient(135deg, var(--brand), var(--accent));
+        box-shadow: 0 0 0 6px rgba(110,231,255,.06);
+      }
+      h1{
+        margin: 10px 0 6px;
+        font-size: 38px;
+        line-height: 1.07;
+        letter-spacing: -.02em;
+      }
+      .subtitle{
+        color: var(--muted);
+        font-size: 15px;
+        margin: 0 0 16px;
+        max-width: 70ch;
+      }
+      .chips{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .chip{
+        font-size: 12px;
+        color: rgba(255,255,255,.86);
+        background: rgba(255,255,255,.06);
+        border: 1px solid rgba(255,255,255,.10);
+        padding: 8px 10px;
+        border-radius: 999px;
+      }
+      .chip b{ color: white; font-weight: 750; }
+
+      .mini{
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      @media (max-width: 520px){
+        .mini{ grid-template-columns: 1fr; }
+      }
+      .stat{
+        border: 1px solid rgba(255,255,255,.10);
+        background: rgba(255,255,255,.04);
+        border-radius: 16px;
+        padding: 14px 14px 12px;
+      }
+      .stat .label{ font-size: 12px; color: var(--muted); }
+      .stat .value{ margin-top: 6px; font-size: 14px; color: rgba(255,255,255,.88); }
+      .stat .value strong{ font-weight: 800; color: white; }
+      .stat .hint{ margin-top: 6px; font-size: 12px; color: var(--faint); }
+
+      .section{
+        margin-top: 18px;
+        padding: 20px 0 0;
+      }
+      .section h2{
+        margin: 0 0 10px;
+        font-size: 20px;
+        letter-spacing: -.01em;
+      }
+      .section p{ margin: 0 0 12px; color: var(--muted); }
+
+      .grid{
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+      }
+      @media (max-width: 980px){
+        .grid{ grid-template-columns: repeat(2, 1fr); }
+      }
+      @media (max-width: 640px){
+        .grid{ grid-template-columns: 1fr; }
+      }
+      .use{
+        border-radius: var(--radius);
+        border: 1px solid rgba(255,255,255,.10);
+        background: rgba(255,255,255,.04);
+        padding: 16px;
+      }
+      .use h3{
+        margin: 0 0 6px;
+        font-size: 14px;
+        font-weight: 850;
+        color: rgba(255,255,255,.94);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .tag{
+        font-size: 11px;
+        color: rgba(255,255,255,.85);
+        border: 1px solid rgba(255,255,255,.12);
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(255,255,255,.04);
+      }
+      .tag.good{ border-color: rgba(52,211,153,.35); color: rgba(52,211,153,.95); background: rgba(52,211,153,.07); }
+      .tag.warn{ border-color: rgba(251,191,36,.35); color: rgba(251,191,36,.95); background: rgba(251,191,36,.07); }
+      .tag.brand{ border-color: rgba(110,231,255,.35); color: rgba(110,231,255,.95); background: rgba(110,231,255,.07); }
+      .use p{ margin: 0; color: var(--muted); font-size: 13px; }
+
+      .cols{
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      @media (max-width: 860px){
+        .cols{ grid-template-columns: 1fr; }
+      }
+      ul{
+        margin: 10px 0 0;
+        padding: 0 0 0 18px;
+        color: var(--muted);
+      }
+      li{ margin: 6px 0; }
+      li b{ color: rgba(255,255,255,.92); }
+
+      .flow{
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        line-height: 1.55;
+        color: rgba(255,255,255,.78);
+        background: rgba(0,0,0,.30);
+        border: 1px solid rgba(255,255,255,.10);
+        border-radius: 18px;
+        padding: 14px 14px;
+        overflow: auto;
+      }
+
+      footer{
+        margin-top: 24px;
+        padding-top: 18px;
+        border-top: 1px solid rgba(255,255,255,.10);
+        color: rgba(255,255,255,.55);
+        font-size: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: space-between;
+      }
+      .pill{
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255,255,255,.04);
+        border: 1px solid rgba(255,255,255,.10);
+        color: rgba(255,255,255,.70);
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="wrap">
+      <section class="top">
+        <div class="card">
+          <div class="inner">
+            <div class="kicker"><span class="dot"></span> AdsClaw — visão simples</div>
+            <h1>Um “piloto automático” de performance com humano no controle.</h1>
+            <p class="subtitle">
+              O AdsClaw é um agente que <b>monitora</b> contas de anúncios, <b>detecta problemas</b> (ex.: fadiga criativa),
+              <b>gera ações</b> (copy/creatives) e <b>pede aprovação</b> quando necessário — tudo registrado no Supabase e visível no Cockpit.
+            </p>
+            <div class="chips">
+              <span class="chip"><b>Entradas</b>: Telegram · HTTP · Cron</span>
+              <span class="chip"><b>Cérebro</b>: AgentLoop (ReAct)</span>
+              <span class="chip"><b>Ações</b>: Tools (Meta/Google/Creative)</span>
+              <span class="chip"><b>Memória</b>: Supabase <code>chat_history</code></span>
+              <span class="chip"><b>UI</b>: Cockpit (Dashboard/Alertas/Conversas)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="inner">
+            <div class="kicker"><span class="dot"></span> Como pensar no sistema</div>
+            <div class="mini">
+              <div class="stat">
+                <div class="label">O AdsClaw faz bem</div>
+                <div class="value"><strong>monitorar → decidir → agir</strong></div>
+                <div class="hint">Tudo via tools: auditável, repetível.</div>
+              </div>
+              <div class="stat">
+                <div class="label">Onde ele “não inventa”</div>
+                <div class="value"><strong>métricas reais</strong> (Meta/Google)</div>
+                <div class="hint">Integrações via MCP servers.</div>
+              </div>
+              <div class="stat">
+                <div class="label">Onde o humano entra</div>
+                <div class="value"><strong>aprovações</strong> e decisões</div>
+                <div class="hint">Human-in-the-loop (Telegram/Cockpit).</div>
+              </div>
+              <div class="stat">
+                <div class="label">Onde tudo fica salvo</div>
+                <div class="value"><strong>Supabase</strong> (DB + Storage)</div>
+                <div class="hint">Histórico, alertas, assets e regras.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section card">
+        <div class="inner">
+          <h2>Como funciona (bem simples)</h2>
+          <p>
+            O fluxo abaixo resume o “motor” do AdsClaw. A parte importante: o modelo decide quando chamar uma tool, o sistema executa,
+            guarda a observação e continua até terminar.
+          </p>
+          <pre class="flow">Entradas
+  ├─ Telegram (mensagens / botões)
+  ├─ HTTP (/api/*)
+  └─ Orchestrator (cron: auditorias)
+         │
+         ▼
+SkillRouter (escolhe “persona/skill” do agente)
+         │
+         ▼
+AgentLoop (ReAct)
+  ├─ pensa (Thought)
+  ├─ escolhe uma Tool (Action)
+  ├─ executa a Tool (Observation)
+  └─ repete até concluir (ou limite)
+         │
+         ├─ Supabase: salva memória em chat_history
+         ├─ Supabase: cria/atualiza alerts e pending_approvals
+         └─ Storage: publica assets (imagens/vídeos)
+         ▼
+Saídas
+  ├─ Resposta no Telegram/HTTP
+  └─ Cockpit (Dashboard, Alertas, Aprovações, Conversas)</pre>
+          <p>
+            Pastas típicas no repo:
+            <code>agent/</code> (backend do agente),
+            <code>cockpit/</code> (frontend),
+            <code>mcp-servers/</code> (integrações),
+            <code>supabase/</code> (schema/migrations).
+          </p>
+        </div>
+      </section>
+
+      <section class="section card">
+        <div class="inner">
+          <h2>Cases de uso (na prática)</h2>
+          <div class="grid">
+            <div class="use">
+              <h3>Monitorar performance <span class="tag brand">Meta/Google</span></h3>
+              <p>Consulta métricas reais (CPA/ROAS/CTR/etc.), compara com as regras do cliente e gera insights acionáveis.</p>
+            </div>
+            <div class="use">
+              <h3>Detectar fadiga criativa <span class="tag warn">alerta</span></h3>
+              <p>Se o refresh de criativos passou do prazo, cria um alerta e inicia o fluxo de decisão (“o que fazer agora?”).</p>
+            </div>
+            <div class="use">
+              <h3>Laboratório Criativo <span class="tag good">gerar</span></h3>
+              <p>Gera copies, imagens e vídeos (baseado em benchmark e contexto do cliente) e salva no Storage.</p>
+            </div>
+            <div class="use">
+              <h3>Aprovação do gestor <span class="tag brand">HITL</span></h3>
+              <p>Antes de ações sensíveis, cria uma pending approval e notifica o gestor para aprovar/rejeitar.</p>
+            </div>
+            <div class="use">
+              <h3>Notificações no Telegram <span class="tag brand">notify</span></h3>
+              <p>Envia alertas e “resumos executivos” com botões inline e histórico rastreável por cliente.</p>
+            </div>
+            <div class="use">
+              <h3>Cockpit para operação <span class="tag good">UI</span></h3>
+              <p>Um painel único para ver KPIs, alertas, aprovações pendentes e as conversas anteriores do agente.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section card">
+        <div class="inner">
+          <h2>Tools e Skills (explicação simples)</h2>
+          <p>
+            No AdsClaw existem dois conceitos que parecem iguais, mas não são:
+          </p>
+          <div class="cols">
+            <div class="use">
+              <h3>Tools (runtime do agente) <span class="tag good">executam ações</span></h3>
+              <p>São funções registradas no <b>ToolRegistry</b> para o AgentLoop chamar. Elas fazem trabalho real (Supabase, MCP, geração, notificações).</p>
+              <ul>
+                <li><b>Dados e regras</b>: <code>list_clients</code>, <code>get_client_rules</code></li>
+                <li><b>Meta Ads (MCP)</b>: <code>meta_list_campaigns</code>, <code>meta_get_account_insights</code>, <code>meta_get_campaign_insights</code></li>
+                <li><b>Google Ads (MCP)</b>: <code>google_list_campaigns</code>, <code>google_get_performance</code></li>
+                <li><b>Benchmarks</b>: <code>fetch_ad_benchmarks</code></li>
+                <li><b>Copy e mídia</b>: <code>generate_ad_copy</code>, <code>generate_image</code>, <code>generate_video</code></li>
+                <li><b>Assets</b>: <code>upload_asset</code></li>
+                <li><b>Human-in-the-loop</b>: <code>ask_approval</code>, <code>notify_manager</code></li>
+              </ul>
+            </div>
+            <div class="use">
+              <h3>Skills (dev/Cursor) <span class="tag warn">ajudam a construir</span></h3>
+              <p>
+                São “habilidades” do assistente durante o desenvolvimento (documentação, UI, testes, etc.). Elas <b>não</b> são tools do runtime.
+              </p>
+              <ul>
+                <li><b>Planejar e esclarecer</b>: brainstorming / SDD (Spec-Driven Development)</li>
+                <li><b>UI</b>: frontend-design (componentes e páginas)</li>
+                <li><b>Testar</b>: webapp-testing / Playwright (fluxos no cockpit)</li>
+                <li><b>Integrações</b>: mcp-builder (criar MCP servers)</li>
+                <li><b>Conteúdo</b>: doc-coauthoring (docs, guias e specs)</li>
+              </ul>
+              <p style="margin-top:12px">
+                Dica: se você está operando o AdsClaw em produção, pense em <b>tools</b>. Se você está evoluindo o produto, pense em <b>skills</b>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <span class="pill">Sugestão: abra este arquivo no navegador: <code>docs/adsclaw.html</code></span>
+        <span class="pill">Baseado em <code>references/SPEC.md</code> e <code>references/PLAN.md</code></span>
+      </footer>
+    </main>
+  </body>
+</html>
+

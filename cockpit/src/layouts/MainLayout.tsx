@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, LogOut, Bell, Search, Terminal } from 'lucide-react';
+import { LayoutDashboard, Users, LogOut, Bell, Search, Terminal, AlertTriangle, Shield, MessageSquare } from 'lucide-react';
 
 const MainLayout = () => {
   const location = useLocation();
@@ -7,6 +7,9 @@ const MainLayout = () => {
   const menuItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/clients', label: 'Clientes', icon: Users },
+    { path: '/alerts', label: 'Alertas', icon: AlertTriangle },
+    { path: '/approvals', label: 'Aprovações', icon: Shield },
+    { path: '/conversations', label: 'Conversas', icon: MessageSquare },
   ];
 
   return (

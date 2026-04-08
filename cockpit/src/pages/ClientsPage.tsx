@@ -54,13 +54,16 @@ const ClientsPage = () => {
       if (data) {
         const { error: rulesError } = await supabase
           .from('client_rules')
-          .insert([{ 
-            client_id: data.id, 
-            max_cpa: 5.0, 
+          .insert([{
+            client_id: data.id,
+            target_cpa: 5.0,
+            target_roas: 3.0,
             daily_budget: 100,
-            fatigue_days: 7 
+            creative_refresh_days: 7,
+            sector: newClientNiche || 'geral',
+            brand_voice: 'Profissional e direto.',
           }]);
-        
+
         if (rulesError) console.error('Erro ao criar regras iniciais:', rulesError);
       }
 

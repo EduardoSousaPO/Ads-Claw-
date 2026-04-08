@@ -1,5 +1,14 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import type { AgentInput, AgentOutput } from '../core/AgentLoop';
+
+// Aceita qualquer UUID bem formatado (incluindo seeds de dev com zeros)
+const UUID_RE =
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+function isClientUuid(value: unknown): value is string {
+    return typeof value === 'string' && UUID_RE.test(value);
+}
 
 /**
  * Servidor HTTP do AdsClaw Agent.
@@ -9,24 +18,22 @@ import cors from 'cors';
 export class HttpServer {
   private app: express.Application;
   private port: number;
-  private onMessage: (input: any) => Promise<any>;
+  private onMessage: (input: AgentInput) => Promise<AgentOutput>;
 
-  constructor(onMessage: (input: any) => Promise<any>, port = 3001) {
+  constructor(onMessage: (input: AgentInput) => Promise<AgentOutput>, port = 3001) {
     this.port = port;
     this.onMessage = onMessage;
     this.app = express();
-    this.app.use(cors()); // Permite requisições da Vercel (domínio externo)
+    this.app.use(cors());
     this.app.use(express.json());
     this.setupRoutes();
   }
 
   private setupRoutes() {
-    // Health Check - para confirmar que o agente está online
     this.app.get('/api/health', (_req: Request, res: Response) => {
       res.json({ status: 'online', agent: 'AdsClaw SWAS', timestamp: new Date().toISOString() });
     });
 
-    // Rota principal de Chat
     this.app.post('/api/chat', async (req: Request, res: Response) => {
       const { message, clientId, sessionId } = req.body;
 
@@ -35,17 +42,22 @@ export class HttpServer {
         return;
       }
 
+      if (!isClientUuid(clientId)) {
+        res.status(400).json({
+          error: 'Campo "clientId" é obrigatório e deve ser um UUID válido do cliente.',
+        });
+        return;
+      }
+
       console.log(`💬 [HttpServer] Mensagem recebida via Web: "${message.substring(0, 80)}..."`);
 
       try {
-        // Formata o input no mesmo padrão do Telegram para reutilizar o AgentLoop
-        const input = {
+        const input: AgentInput = {
           source: 'web',
-          type: 'text',
-          userId: sessionId || 'web-user',
-          clientId: clientId || null,
+          clientId,
           content: message,
         };
+        void sessionId;
 
         const response = await this.onMessage(input);
 
@@ -53,9 +65,10 @@ export class HttpServer {
           reply: response?.content || 'Entendido. Processando sua solicitação.',
           timestamp: new Date().toISOString(),
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const detail = err instanceof Error ? err.message : String(err);
         console.error('❌ [HttpServer] Erro ao processar mensagem:', err);
-        res.status(500).json({ error: 'Erro interno do Agente.', detail: err.message });
+        res.status(500).json({ error: 'Erro interno do Agente.', detail });
       }
     });
   }
